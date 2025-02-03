@@ -22,16 +22,17 @@ class ProductAdmin(admin.ModelAdmin):
     fields = ('name', 'category', 'description', 'mrp', 'selling_price', 'stock', 'created_at')
     readonly_fields = ('created_at',)
     inlines = [ProductImageInline, ReviewInline]
+    change_list_template = "admin/csv_upload_list.html"  # Ensure this template exists
 
     def display_all_images(self, obj):
         images = obj.product_images.all()
         if images:
-            return format_html(" ".join([f'<img src="{img.image.url}" width="50" height="50" style="margin:2px;">' for img in images]))
+            return format_html(" ".join([
+                f'<img src="{img.image.url}" width="50" height="50" style="margin:2px;">' 
+                for img in images
+            ]))
         return "No images"
     display_all_images.short_description = 'Images'
-
-class CSVUploadAdmin(admin.ModelAdmin):
-    change_list_template = "admin/csv_upload_list.html"
 
     def get_urls(self):
         urls = super().get_urls()
@@ -73,4 +74,3 @@ class CSVUploadAdmin(admin.ModelAdmin):
 admin.site.register(Product, ProductAdmin)
 admin.site.register(Category)
 admin.site.register(Review)
-admin.site.register(Product, CSVUploadAdmin)
