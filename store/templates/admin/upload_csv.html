@@ -1,0 +1,10 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h2>Upload CSV File</h2>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="csv_file" required>
+    <button type="submit">Upload CSV</button>
+</form>
+<a href="{% url 'admin:store_product_changelist' %}">Back to Product List</a>
+{% endblock %}
