@@ -5,6 +5,8 @@ from django.urls import path
 import csv
 from django.contrib import messages
 from io import TextIOWrapper
+import requests
+from django.core.files.base import ContentFile
 from .models import Product, Category, ProductImage, Review
 
 class ProductImageInline(admin.TabularInline):
@@ -27,11 +29,9 @@ class ProductAdmin(admin.ModelAdmin):
     def display_all_images(self, obj):
         images = obj.product_images.all()
         if images:
-            return format_html(" ".join([
-                f'<img src="{img.image.url}" width="50" height="50" style="margin:2px;">' 
-                for img in images
-            ]))
+            return format_html(" ".join([f'<img src="{img.image_url}" width="50" height="50" style="margin:2px;">' for img in images if img.image_url]))
         return "No images"
+
     display_all_images.short_description = 'Images'
 
     def get_urls(self):
@@ -48,29 +48,47 @@ class ProductAdmin(admin.ModelAdmin):
                 messages.error(request, 'Please upload a valid CSV file!')
                 return redirect("..")
 
-            data = TextIOWrapper(csv_file.file, encoding='utf-8')
-            reader = csv.DictReader(data)
+            try:
+                ProductCSVUploadHandler.handle_bulk_upload(csv_file)
+                messages.success(request, 'CSV file uploaded successfully!')
+            except Exception as e:
+                messages.error(request, f"Error processing CSV: {e}")
 
-            for row in reader:
-                category, _ = Category.objects.get_or_create(name=row["category"].strip())
-                product = Product.objects.create(
-                    name=row["name"].strip(),
-                    category=category,
-                    description=row.get("description", ""),
-                    mrp=row["mrp"],
-                    selling_price=row["selling_price"],
-                    stock=row["stock"],
-                )
-
-                image_url = row.get("image_url", "").strip()
-                if image_url:
-                    ProductImage.objects.create(product=product, image_url=image_url)
-
-            messages.success(request, 'CSV file uploaded successfully!')
             return redirect("..")
 
         return render(request, "admin/upload_csv.html", {})
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('category').prefetch_related('product_images')
+
 admin.site.register(Product, ProductAdmin)
 admin.site.register(Category)
 admin.site.register(Review)
+admin.site.register(ProductImage)  # Now visible in Django Admin
+
+
+class ProductCSVUploadHandler:
+    @staticmethod
+    def handle_bulk_upload(csv_file):
+        """
+        Handles bulk upload of products with multiple images stored in separate columns.
+        """
+        decoded_file = csv_file.read().decode("utf-8").splitlines()
+        reader = csv.DictReader(decoded_file)
+
+        for row in reader:
+            category, _ = Category.objects.get_or_create(name=row["category"].strip())
+            product = Product.objects.create(
+                name=row["name"].strip(),
+                category=category,
+                description=row.get("description", ""),
+                mrp=row["mrp"],
+                selling_price=row["selling_price"],
+                stock=row["stock"],
+            )
+
+            # Process all columns dynamically that contain 'image_url'
+            for key, image_url in row.items():
+                if key.startswith("image_url") and image_url.strip():
+                    ProductImage.objects.create(product=product, image_url=image_url.strip())
+
