@@ -5,75 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product List</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        .product { border: 1px solid #ddd; padding: 10px; margin: 10px; display: inline-block; width: 250px; }
-        .product img { width: 100%; height: auto; }
-        .reviews { margin-top: 10px; }
-        .review { border-top: 1px solid #ddd; padding: 10px 0; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .product-container {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .product-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .product-images img, .variant-images img {
+            width: 80px;
+            height: 80px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .variant-container {
+            margin-left: 20px;
+            padding: 10px;
+            border-left: 2px solid #ddd;
+        }
     </style>
-    <script>
-        function toggleFields(imageInput, urlInputId) {
-            var urlInput = document.getElementById(urlInputId);
-            if (imageInput.files.length > 0) {
-                urlInput.disabled = true;
-                urlInput.value = "";
-            } else {
-                urlInput.disabled = false;
-            }
-        }
-
-        function toggleFileInput(urlInput, fileInputId) {
-            var fileInput = document.getElementById(fileInputId);
-            if (urlInput.value.trim() !== "") {
-                fileInput.disabled = true;
-                fileInput.value = "";
-            } else {
-                fileInput.disabled = false;
-            }
-        }
-    </script>
 </head>
 <body>
+
     <h1>Product List</h1>
+
     {% for product in products %}
-        <div class="product">
-            <h3>{{ product.name }}</h3>
-            <p>Category: {{ product.category.name }}</p>
-            <p>Price: ${{ product.selling_price }}</p>
-            <p>Stock: {{ product.stock }}</p>
+    <div class="product-container">
+        <p class="product-title">{{ product.name }} ({{ product.category.name }})</p>
+        <p><strong>MRP:</strong> ₹{{ product.mrp }} | <strong>Selling Price:</strong> ₹{{ product.selling_price }}</p>
+        <p><strong>Stock:</strong> {{ product.stock }}</p>
 
-            <div class="images">
-                <h4>Product Images:</h4>
-                {% for image in product.product_images.all %}
-                    <img src="{{ image.get_image }}" alt="{{ product.name }}">
-                {% endfor %}
-            </div>
+        <!-- Display Product Images -->
+        <div class="product-images">
+            <strong>Product Images:</strong><br>
+            {% for image in product.product_images.all %}
+                <img src="{{ image.image_url }}" alt="Product Image">
+            {% empty %}
+                <p>No images available</p>
+            {% endfor %}
+        </div>
 
-            <div class="reviews">
-                {% if product.reviews.count > 0 %}
-                    <p><strong>Average Rating:</strong> 
-                        {% with product.reviews.all|length as review_count %}
-                            {% with product.reviews.all|dictsort:"rating" as sorted_reviews %}
-                                {% if review_count > 0 %}
-                                    {% with sorted_reviews|last as last_review %}
-                                        {{ last_review.rating }} / 5
-                                    {% endwith %}
-                                {% endif %}
-                            {% endwith %}
-                        {% endwith %}
-                    </p>
-                    {% for review in product.reviews.all %}
-                        <div class="review">
-                            <p><strong>{{ review.name }} (Rating: {{ review.rating }}):</strong></p>
-                            <p>{{ review.comment }}</p>
-                            <p><em>Posted on: {{ review.created_at }}</em></p>
-                        </div>
-                    {% endfor %}
+        <!-- Display Variants -->
+        {% for variant in product.variants.all %}
+        <div class="variant-container">
+            <p><strong>Variant:</strong> {{ variant.size }} | {{ variant.color }}</p>
+            <p><strong>SKU:</strong> {{ variant.sku }} | <strong>Price:</strong> ₹{{ variant.price }}</p>
+            <p><strong>Stock:</strong> {{ variant.stock }}</p>
+
+            <!-- Display Variant Images -->
+            <div class="variant-images">
+                <strong>Variant Image:</strong><br>
+                {% if variant.image_url %}
+                    <img src="{{ variant.image_url }}" alt="Variant Image">
                 {% else %}
-                    <p>No reviews yet.</p>
+                    <p>No image available</p>
                 {% endif %}
             </div>
         </div>
+        {% endfor %}
+    </div>
     {% endfor %}
+
 </body>
 </html>
